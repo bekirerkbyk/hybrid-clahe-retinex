@@ -97,6 +97,17 @@ The content-adaptive fusion gives the highest PSNR — beating the otherwise
 identical fixed-weight fusion by +0.64 dB and ranking first on every individual
 Kodak image — while preserving natural color through the HSV design.
 
+## Additional experiments
+
+- **Real low-light images.** `src/make_real_figure.py` runs the methods on
+  genuine low-light photos (DICM / LIME sets in `data/real/`) with no synthetic
+  degradation, showing the behavior transfers to real captures (qualitative,
+  no ground truth).
+- **Alternative fusion signal.** `methods.hybrid_variance` replaces the
+  illumination weight with a local-variance weight. On the same benchmark it
+  reaches 18.33 dB PSNR — below the illumination-driven design (19.03 dB) —
+  indicating illumination is the more informative signal for this setting.
+
 ## Building the paper
 
 ```bash

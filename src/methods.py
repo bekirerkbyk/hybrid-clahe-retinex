@@ -186,6 +186,41 @@ def hybrid_adaptive(img_bgr, clip_limit=4.0, sigma=30.0, k=0.35, tile=8):
 
     v_fused = w_clahe * v_clahe + w_ssr * v_ssr
     return _merge_v(hsv, v_fused)
+
+
+def hybrid_variance(img_bgr, clip_limit=4.0, sigma=30.0, win=7, gamma=1.0,
+                    tile=8):
+    """Variant of the adaptive fusion using a LOCAL VARIANCE signal instead of
+    the illumination signal (preliminary future-work experiment in the paper).
+
+    A windowed standard deviation of V is normalized to [0,1]; high-variance
+    (edge/texture) regions favor SSR, low-variance (flat) regions favor the
+    bounded CLAHE branch. In the under-exposure-dominated low-light setting the
+    illumination signal (`hybrid_adaptive`) performs better; this is provided
+    for the comparison reported in the paper.
+    """
+    hsv, v = _to_hsv_v(img_bgr)
+    clahe = cv2.createCLAHE(clipLimit=float(clip_limit),
+                            tileGridSize=(int(tile), int(tile)))
+    v_clahe = clahe.apply(v).astype(np.float64)
+
+    v_f = v.astype(np.float64) + 1.0
+    surround = cv2.GaussianBlur(v_f, (0, 0), sigmaX=float(sigma)) + 1.0
+    retinex = np.log(v_f) - np.log(surround)
+    v_ssr = _minmax_to_uint8(retinex).astype(np.float64)
+
+    vf = v.astype(np.float64)
+    mean = cv2.boxFilter(vf, -1, (win, win))
+    sq = cv2.boxFilter(vf * vf, -1, (win, win))
+    std = np.sqrt(np.clip(sq - mean * mean, 0, None))
+    s = np.clip(std / (np.percentile(std, 99) + 1e-6), 0, 1) ** float(gamma)
+    w_ssr = s
+    w_clahe = 1.0 - w_ssr
+
+    v_fused = w_clahe * v_clahe + w_ssr * v_ssr
+    return _merge_v(hsv, v_fused)
+
+
 METHODS = {
     "GHE": lambda img, **kw: global_histogram_equalization(img),
     "Gamma": lambda img, gamma=0.5, **kw: gamma_correction(img, gamma=gamma),

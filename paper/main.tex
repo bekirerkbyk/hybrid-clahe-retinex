@@ -518,8 +518,54 @@ trade-off between fidelity and structure.}
 \label{fig:hyper}
 \end{figure*}
 
-\subsection{Discussion}
-Three observations follow from the results. First, the relationship between PSNR
+\subsection{Transferability to Real Low-Light Images}
+The quantitative study above uses synthetic degradation so that a clean
+reference is available for PSNR/SSIM. To check that the behavior transfers to
+genuinely captured scenes, we additionally apply the methods to \emph{real}
+low-light photographs from the DICM and LIME test sets (no synthetic
+degradation, no ground truth). Fig.~\ref{fig:real} shows three representative
+cases. The qualitative trends mirror the synthetic experiments: GHE
+over-stretches and reveals heavy noise/banding in large flat regions (e.g.\ the
+night sky), SSR-only recovers detail but introduces a visible color cast and
+amplified high-frequency noise, while the proposed adaptive method brightens the
+mid-tones and recovers structure with markedly cleaner dark regions and more
+natural color, because it leans on the bounded CLAHE branch exactly where the
+input is darkest. On the very dark Eiffel-tower scene the adaptive output is
+comparatively conservative -- it suppresses noise at the cost of leaving the
+deepest shadows dim -- which is consistent with its design priority of avoiding
+noise amplification. As these images have no reference, this evaluation is
+qualitative only, but it indicates that the conclusions are not an artifact of
+the synthetic protocol.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{fig_real.png}
+\caption{Qualitative results on \emph{real} low-light images from the DICM and
+LIME sets (no synthetic degradation, no ground truth). GHE amplifies noise in
+flat sky regions and SSR-only adds a color cast; the proposed adaptive method
+gives cleaner, color-faithful enhancement, confirming that the synthetic-benchmark
+behavior transfers to genuine captures.}
+\label{fig:real}
+\end{figure*}
+
+\subsection{Alternative Fusion Signal: Local Variance (Preliminary)}
+The proposed weighting derives the per-pixel weight from a smoothed
+\emph{illumination} estimate. A natural question is whether a different local
+signal would work better. As a preliminary study toward content-adaptive
+weighting, we replaced the illumination map with a \emph{local variance} map
+(a $7\times7$ windowed standard deviation of the V channel), so that
+high-variance edge/texture regions favor the SSR branch and low-variance flat
+regions -- where noise dominates -- favor the bounded CLAHE branch. Averaged
+over the same benchmark, the best variance-driven variant reached
+$18.33$\,dB PSNR / $0.493$ SSIM, below the illumination-driven design
+($19.03$\,dB / $0.494$) and comparable to the fixed-weight fusion. We interpret
+this as evidence that, for the under-exposure-dominated low-light setting, the
+\emph{where-is-it-dark} signal (illumination) is more informative for branch
+selection than the \emph{where-is-there-texture} signal (variance), since noise
+amplification is governed primarily by local brightness. A weighting that fuses
+both signals is a promising direction for future work.
+
+
 and BRISQUE is not monotonic: SSR-only attains a competitive PSNR ($15.70$\,dB)
 yet the worst BRISQUE ($55.8$), because its halos and color shifts are
 structured distortions that natural-scene-statistics penalize even when
@@ -556,18 +602,22 @@ gain, while the hyperparameter study identified moderate clip limits,
 mid-to-large SSR scales, and an exponent of $k\!\approx\!0.35$ as the most
 effective regime.
 
-\textbf{Limitations.} The evaluation uses synthetically degraded natural images
-rather than real captured nighttime surveillance footage, so absolute scores
-may not transfer directly; SSR uses a single fixed scale; the adaptive weight
-depends only on a smoothed luminance estimate (not on a true noise or texture
-estimate); and SSIM slightly favors the conservative Gamma baseline, indicating
-the fusion can still introduce minor structural deviation.
+\textbf{Limitations.} The \emph{quantitative} evaluation uses synthetically
+degraded images so that full-reference metrics are defined; although we showed
+that the qualitative behavior transfers to real DICM/LIME captures, numerical
+scores on paired real footage are not reported. In addition, SSR uses a single
+fixed scale; the adaptive weight depends only on a smoothed luminance estimate
+(not on a true noise or texture estimate); and SSIM slightly favors the
+conservative Gamma baseline, indicating the fusion can still introduce minor
+structural deviation.
 
 \textbf{Future work.} Promising directions include multi-scale Retinex (MSR)
-with color restoration, deriving the fusion weight from a local
-noise/texture estimate rather than luminance alone, validation on real low-light
-datasets (e.g., LOL, ExDark) and on downstream detection accuracy, and a learned
-but lightweight selection of $\beta$, $\sigma$, and the adaptive exponent $k$.
+with color restoration; a weighting that \emph{combines} the illumination signal
+used here with the local-variance signal explored in our preliminary study, so
+that branch selection responds to both brightness and texture; quantitative
+validation on paired real low-light datasets (e.g., LOL) and on downstream
+detection accuracy; and a learned but lightweight selection of $\beta$,
+$\sigma$, and the adaptive exponent $k$.
 
 \section*{Acknowledgment}
 Generative AI tools (ChatGPT and Gemini) were used to help structure the report
